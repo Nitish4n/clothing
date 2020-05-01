@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import {Route, Switch} from 'react-router-dom';
+import {Route, Switch, Redirect} from 'react-router-dom';
 import HomePage from './pages/homepage/home.component';
 import ShopPage from './pages/shoppage/shoppage.component';
 import Header from './components/header/header.component';
@@ -17,26 +17,21 @@ class App extends React.Component {
   unsubscribeFromAuth = null;
 
   componentDidMount() {
+
+    const {setCurrentUser}  = this.props;
     this.unsubscribeFromAuth = auth.onAuthStateChanged(async userAuth => {
-      // this.setState({ currentUser : user})
-      console.log('user auth');
-      console.log(userAuth)
+      
       if(userAuth) {
         const userRef = await createUserProfileDocument(userAuth);
 
         userRef.onSnapshot(snapShot => {
-          this.props.setCurrentUser({
+          setCurrentUser({
               id: snapShot.id,
               ...snapShot.data()
-            
-          }, () => {
-            // console.log(this.props)
           })
         })
       }else{
-        this.props.setCurrentUser({
-          currentUser: userAuth
-        });
+        setCurrentUser(userAuth);
       }
       
       // console.log(this.state.currentUser);
@@ -54,7 +49,12 @@ class App extends React.Component {
         <Switch>
           <Route exact path="/" component={HomePage} />
           <Route exact path="/shop" component={ShopPage} />
-          <Route exact path="/signin" component={SignInAndSignUp} />
+          <Route exact path="/signin" render={() => this.props.currentUser ? ( 
+                    <Redirect to="/" />
+                    ) : (
+                    <SignInAndSignUp />
+                    ) 
+          } />
         </Switch>
       </div>
     );
@@ -62,9 +62,13 @@ class App extends React.Component {
   
 }
 
+const mapStateToProps = state => ({
+  currentUser : state.user.currentUser
+})
+
 const mapDispatchToProps = dispatch => {
   return {
     setCurrentUser : user => dispatch(setCurrentUser(user))
   }
 }
-export default connect(null , mapDispatchToProps)(App);
+export default connect(mapStateToProps , mapDispatchToProps)(App);
